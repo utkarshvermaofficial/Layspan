@@ -24,23 +24,58 @@ export default function Home() {
 
     setProcessingStatus('processing');
     setProcessingProgress(0);
+    const allResults = [];
 
-    // Simulate processing
-    for (let i = 0; i < selectedFiles.length; i++) {
-      setCurrentFile(selectedFiles[i].name);
-      
-      // Simulate processing time
-      for (let progress = 0; progress <= 100; progress += 10) {
-        setProcessingProgress(Math.round(((i * 100) + progress) / selectedFiles.length));
-        await new Promise(resolve => setTimeout(resolve, 200));
+    try {
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        setCurrentFile(file.name);
+        
+        // Update progress for current file start
+        setProcessingProgress(Math.round((i / selectedFiles.length) * 100));
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/process-document', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to process ${file.name}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        
+        // Transform the API response to match the expected format
+        if (result.json_output && Array.isArray(result.json_output)) {
+          const fileResults = result.json_output.map(event => ({
+            event: event.event_description || 'Unknown Event',
+            startTime: event.event_date && event.event_time 
+              ? `${event.event_date}T${event.event_time}:00` 
+              : event.event_date || 'Unknown',
+            endTime: null, // API doesn't provide end time, could be calculated
+            description: event.event_description || '',
+            sourceDocument: file.name
+          }));
+          allResults.push(...fileResults);
+        }
+
+        // Update progress for current file completion
+        setProcessingProgress(Math.round(((i + 1) / selectedFiles.length) * 100));
       }
-    }
 
-    // TODO: Replace with actual ML processing
-    // For now, just show placeholder message
-    setExtractedResults([]);
-    setProcessingStatus('completed');
-    setCurrentFile('');
+      setExtractedResults(allResults);
+      setProcessingStatus('completed');
+      setCurrentFile('');
+    } catch (error) {
+      console.error('Error processing files:', error);
+      setProcessingStatus('error');
+      setCurrentFile('');
+      // You might want to show an error message to the user
+      alert(`Error processing files: ${error.message}`);
+    }
   };
 
   const handleDownload = (format) => {
@@ -195,18 +230,35 @@ export default function Home() {
         )}
 
         {/* Results */}
-        {processingStatus === 'completed' && (
+        {processingStatus === 'completed' && extractedResults.length === 0 && (
           <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-700 p-6">
             <div className="text-center py-12">
               <svg className="mx-auto h-16 w-16 text-gray-500 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              <h3 className="text-lg font-medium text-white mb-2">Processing Complete</h3>
+              <h3 className="text-lg font-medium text-white mb-2">No Events Found</h3>
               <p className="text-gray-300 text-base">
-                <strong>Machine Learning required.</strong>
+                The document was processed but no events were extracted.
               </p>
               <p className="text-sm text-gray-400 mt-2">
-                ML models will be integrated to extract events from uploaded SoF documents.
+                Please ensure the document contains Statement of Facts information with dates and times.
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {processingStatus === 'error' && (
+          <div className="bg-red-900 border border-red-700 rounded-lg shadow-xl p-6">
+            <div className="text-center py-12">
+              <svg className="mx-auto h-16 w-16 text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+              <h3 className="text-lg font-medium text-white mb-2">Processing Error</h3>
+              <p className="text-gray-300 text-base">
+                An error occurred while processing your documents.
+              </p>
+              <p className="text-sm text-gray-400 mt-2">
+                Please try again or contact support if the issue persists.
               </p>
             </div>
           </div>
