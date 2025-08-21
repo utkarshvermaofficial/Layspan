@@ -121,6 +121,9 @@ const ResultsTable = ({ results, onDownload }) => {
                 Duration
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                Efficiency
+              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
                 Source Document
               </th>
             </tr>
@@ -141,7 +144,20 @@ const ResultsTable = ({ results, onDownload }) => {
                   {formatDateTime(event.endTime)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  {calculateDuration(event.startTime, event.endTime)}
+                  {event.duration || calculateDuration(event.startTime, event.endTime)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                    event.efficiency_rate === '100%' || event.efficiency_rate === '100 %' 
+                      ? 'bg-green-100 text-green-800' 
+                      : event.efficiency_rate === '50%' || event.efficiency_rate === '50 %'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : event.efficiency_rate === '0%' || event.efficiency_rate === '0 %'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {event.efficiency_rate || 'N/A'}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                   {event.sourceDocument || 'Unknown'}
