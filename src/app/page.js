@@ -4,6 +4,7 @@ import Header from '../components/ui/Header';
 import FileUpload from '../components/ui/FileUpload';
 import ProcessingStatus from '../components/ui/ProcessingStatus';
 import ResultsTable from '../components/ui/ResultsTable';
+import AnalysisPanel from '../components/ui/AnalysisPanel';
 import FeatureCard from '../components/ui/FeatureCard';
 
 export default function Home() {
@@ -12,10 +13,12 @@ export default function Home() {
   const [processingProgress, setProcessingProgress] = useState(0);
   const [currentFile, setCurrentFile] = useState('');
   const [extractedResults, setExtractedResults] = useState([]);
+  const [analysisData, setAnalysisData] = useState(null);
 
   const handleFileSelect = (files) => {
     setSelectedFiles(files);
     setExtractedResults([]);
+    setAnalysisData(null);
     setProcessingStatus(null);
   };
 
@@ -48,16 +51,25 @@ export default function Home() {
 
         const result = await response.json();
         
+        // Store analysis data (only from the first file for now)
+        if (i === 0 && result.analysis) {
+          setAnalysisData(result.analysis);
+        }
+        
         // Transform the API response to match the expected format
         if (result.json_output && Array.isArray(result.json_output)) {
           const fileResults = result.json_output.map(event => ({
             event: event.event_description || 'Unknown Event',
-            startTime: event.event_date && event.event_time 
-              ? `${event.event_date}T${event.event_time}:00` 
+            startTime: event.event_date && event.event_start_time 
+              ? `${event.event_date}T${event.event_start_time}:00` 
               : event.event_date || 'Unknown',
-            endTime: null, // API doesn't provide end time, could be calculated
+            endTime: event.event_date && event.event_end_time 
+              ? `${event.event_date}T${event.event_end_time}:00` 
+              : null,
             description: event.event_description || '',
-            sourceDocument: file.name
+            sourceDocument: file.name,
+            duration: event.duration || 'N/A',
+            efficiency_rate: event.efficiency_rate || 'N/A'
           }));
           allResults.push(...fileResults);
         }
@@ -88,14 +100,15 @@ export default function Home() {
       filename = 'sof-events.json';
       mimeType = 'application/json';
     } else if (format === 'csv') {
-      const headers = ['Event', 'Start Time', 'End Time', 'Duration', 'Description', 'Source Document'];
+      const headers = ['Event', 'Start Time', 'End Time', 'Duration', 'Efficiency Rate', 'Description', 'Source Document'];
       const csvContent = [
         headers.join(','),
         ...extractedResults.map(event => [
           `"${event.event}"`,
           `"${event.startTime}"`,
           `"${event.endTime}"`,
-          `"${calculateDuration(event.startTime, event.endTime)}"`,
+          `"${event.duration || calculateDuration(event.startTime, event.endTime)}"`,
+          `"${event.efficiency_rate || 'N/A'}"`,
           `"${event.description || ''}"`,
           `"${event.sourceDocument}"`
         ].join(','))
@@ -264,11 +277,17 @@ export default function Home() {
           </div>
         )}
         {extractedResults.length > 0 && (
-          <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-700 p-6">
-            <ResultsTable 
-              results={extractedResults}
-              onDownload={handleDownload}
-            />
+          <div className="space-y-8">
+            {/* Analysis Panel */}
+            <AnalysisPanel analysis={analysisData} events={extractedResults} />
+            
+            {/* Results Table */}
+            <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-700 p-6">
+              <ResultsTable 
+                results={extractedResults}
+                onDownload={handleDownload}
+              />
+            </div>
           </div>
         )}
       </main>
