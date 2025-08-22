@@ -82,11 +82,11 @@ const FileUpload = ({ onFileSelect }) => {
           <div>
             <label htmlFor="file-upload" className="cursor-pointer">
               <span className="text-lg font-medium text-white">
-                Drop Statement of Facts here
+                Drop Statement of Facts files here
               </span>
               <br />
               <span className="text-sm text-gray-400">
-                or click to browse files
+                or click to browse multiple files
               </span>
               <input
                 id="file-upload"
@@ -101,6 +101,8 @@ const FileUpload = ({ onFileSelect }) => {
           </div>
           <p className="text-xs text-gray-400">
             Supports PDF, Word documents (DOC, DOCX), and Images (JPG, PNG, TIFF, etc.)
+            <br />
+            <span className="text-blue-300">Multiple files will be processed together with automatic duplicate removal</span>
           </p>
         </div>
       </div>
