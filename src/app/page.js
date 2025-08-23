@@ -6,6 +6,7 @@ import ProcessingStatus from '../components/ui/ProcessingStatus';
 import ResultsTable from '../components/ui/ResultsTable';
 import AnalysisPanel from '../components/ui/AnalysisPanel';
 import FeatureCard from '../components/ui/FeatureCard';
+import PortVisualization from '../components/ui/PortVisualization'; // Import the new component
 
 export default function Home() {
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -302,6 +303,9 @@ export default function Home() {
         )}
         {extractedResults.length > 0 && (
           <div className="space-y-8">
+            {/* Port Visualization */}
+            <PortVisualization events={extractedResults} analysis={analysisData} />
+
             {/* Analysis Panel */}
             <AnalysisPanel analysis={analysisData} events={extractedResults} />
             

@@ -329,6 +329,80 @@ const AnalysisPanel = ({ analysis, events }) => {
       });
     }
 
+    // Events Table (Tasks)
+    if (Array.isArray(events) && events.length) {
+      checkPageBreak(40);
+      doc.setFontSize(14);
+      doc.setFont(undefined, 'bold');
+      doc.text('Event Log', margin, yPosition);
+      yPosition += 10;
+
+      // Table headers
+      const colWidths = { idx: 8, event: 60, start: 38, end: 38, duration: 26 }; // total 170
+      const headerY = yPosition;
+      const rowHeight = 8;
+      doc.setFontSize(9);
+      doc.setFont(undefined, 'bold');
+      doc.text('#', margin + 1, headerY);
+      doc.text('Event', margin + colWidths.idx + 1, headerY);
+      doc.text('Start', margin + colWidths.idx + colWidths.event + 1, headerY);
+      doc.text('End', margin + colWidths.idx + colWidths.event + colWidths.start + 1, headerY);
+      doc.text('Duration', margin + colWidths.idx + colWidths.event + colWidths.start + colWidths.end + 1, headerY);
+      yPosition += 4;
+      doc.setDrawColor(200);
+      doc.line(margin, yPosition, margin + 170, yPosition);
+      yPosition += 3;
+      doc.setFont(undefined, 'normal');
+
+      const formatDateTime = (dateTime) => {
+        if (!dateTime) return 'N/A';
+        try {
+          return new Date(dateTime).toLocaleString('en-GB', {
+            year: '2-digit', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', hour12: false
+          });
+        } catch { return 'N/A'; }
+      };
+      const calcDuration = (start, end) => {
+        if (!start || !end) return 'N/A';
+        const diff = new Date(end) - new Date(start);
+        if (isNaN(diff) || diff < 0) return 'N/A';
+        return (diff / 3600000).toFixed(2) + 'h';
+      };
+
+      events.forEach((ev, idx) => {
+        // Split event text if too long
+        const eventLines = doc.splitTextToSize(ev.event || '—', colWidths.event - 2);
+        const neededHeight = Math.max(eventLines.length * 4, rowHeight);
+        checkPageBreak(neededHeight + 4);
+
+        let rowY = yPosition + 3; // baseline for text
+        // Draw background band (alternating)
+        if (idx % 2 === 0) {
+          doc.setFillColor(36, 52, 75); // subtle blue-gray
+          doc.rect(margin, yPosition, 170, neededHeight, 'F');
+        }
+        // Index
+        doc.setTextColor(255);
+        doc.text(String(idx + 1), margin + 1, rowY);
+        // Event multiline
+        eventLines.forEach((line, lineIdx) => {
+          doc.text(line, margin + colWidths.idx + 1, rowY + lineIdx * 4);
+        });
+        // Start
+        doc.text(formatDateTime(ev.startTime), margin + colWidths.idx + colWidths.event + 1, rowY);
+        // End
+        doc.text(formatDateTime(ev.endTime), margin + colWidths.idx + colWidths.event + colWidths.start + 1, rowY);
+        // Duration
+        const durationText = ev.duration ? ev.duration.replace('hours','h') : calcDuration(ev.startTime, ev.endTime);
+        doc.text(durationText, margin + colWidths.idx + colWidths.event + colWidths.start + colWidths.end + 1, rowY);
+
+        yPosition += neededHeight;
+      });
+
+      yPosition += 6;
+    }
+
     // Add footer with timestamp
     const timestamp = new Date().toLocaleString();
     doc.setFontSize(8);
