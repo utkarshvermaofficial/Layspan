@@ -6,6 +6,7 @@ import ProcessingStatus from '../components/ui/ProcessingStatus';
 import ResultsTable from '../components/ui/ResultsTable';
 import AnalysisPanel from '../components/ui/AnalysisPanel';
 import FeatureCard from '../components/ui/FeatureCard';
+import PortVisualization from '../components/ui/PortVisualization'; // Import the new component
 
 export default function Home() {
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -14,11 +15,13 @@ export default function Home() {
   const [currentFile, setCurrentFile] = useState('');
   const [extractedResults, setExtractedResults] = useState([]);
   const [analysisData, setAnalysisData] = useState(null);
+  const [processingStats, setProcessingStats] = useState(null);
 
   const handleFileSelect = (files) => {
     setSelectedFiles(files);
     setExtractedResults([]);
     setAnalysisData(null);
+    setProcessingStats(null);
     setProcessingStatus(null);
   };
 
@@ -27,65 +30,66 @@ export default function Home() {
 
     setProcessingStatus('processing');
     setProcessingProgress(0);
-    const allResults = [];
+    setCurrentFile(`Processing ${selectedFiles.length} files together...`);
 
     try {
-      for (let i = 0; i < selectedFiles.length; i++) {
-        const file = selectedFiles[i];
-        setCurrentFile(file.name);
-        
-        // Update progress for current file start
-        setProcessingProgress(Math.round((i / selectedFiles.length) * 100));
+      // Create FormData with all files
+      const formData = new FormData();
+      selectedFiles.forEach((file, index) => {
+        formData.append('files', file); // Use 'files' instead of 'file'
+      });
 
-        const formData = new FormData();
-        formData.append('file', file);
+      // Update progress to show we're processing
+      setProcessingProgress(50);
 
-        const response = await fetch('/api/process-document', {
-          method: 'POST',
-          body: formData,
-        });
+      const response = await fetch('/api/process-document', {
+        method: 'POST',
+        body: formData,
+      });
 
-        if (!response.ok) {
-          throw new Error(`Failed to process ${file.name}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        
-        // Store analysis data (only from the first file for now)
-        if (i === 0 && result.analysis) {
-          setAnalysisData(result.analysis);
-        }
-        
-        // Transform the API response to match the expected format
-        if (result.json_output && Array.isArray(result.json_output)) {
-          const fileResults = result.json_output.map(event => ({
-            event: event.event_description || 'Unknown Event',
-            startTime: event.event_date && event.event_start_time 
-              ? `${event.event_date}T${event.event_start_time}:00` 
-              : event.event_date || 'Unknown',
-            endTime: event.event_date && event.event_end_time 
-              ? `${event.event_date}T${event.event_end_time}:00` 
-              : null,
-            description: event.event_description || '',
-            sourceDocument: file.name,
-            duration: event.duration || 'N/A',
-            efficiency_rate: event.efficiency_rate || 'N/A'
-          }));
-          allResults.push(...fileResults);
-        }
-
-        // Update progress for current file completion
-        setProcessingProgress(Math.round(((i + 1) / selectedFiles.length) * 100));
+      if (!response.ok) {
+        throw new Error(`Failed to process files: ${response.statusText}`);
       }
 
-      setExtractedResults(allResults);
+      const result = await response.json();
+      
+      // Store analysis data
+      if (result.analysis) {
+        setAnalysisData(result.analysis);
+      }
+      
+      // Transform the API response to match the expected format
+      if (result.json_output && Array.isArray(result.json_output)) {
+        const fileResults = result.json_output.map(event => ({
+          event: event.event_description || 'Unknown Event',
+          startTime: event.event_date && event.event_start_time 
+            ? `${event.event_date}T${event.event_start_time}:00` 
+            : event.event_date || 'Unknown',
+          endTime: event.event_date && event.event_end_time 
+            ? `${event.event_date}T${event.event_end_time}:00` 
+            : null,
+          description: event.event_description || '',
+          sourceDocument: 'Combined Analysis', // Since we're processing together
+          duration: event.duration || 'N/A',
+          efficiency_rate: event.efficiency_rate || 'N/A'
+        }));
+        setExtractedResults(fileResults);
+      }
+
+      setProcessingProgress(100);
       setProcessingStatus('completed');
       setCurrentFile('');
+      
+      // Show processing stats if available
+      if (result.processing_stats) {
+        console.log(`✅ Batch processing complete:`, result.processing_stats);
+        setProcessingStats(result.processing_stats);
+      }
+
     } catch (error) {
       console.error('Error processing files:', error);
       setProcessingStatus('error');
       setCurrentFile('');
-      // You might want to show an error message to the user
       alert(`Error processing files: ${error.message}`);
     }
   };
@@ -146,17 +150,17 @@ export default function Home() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       ),
-      title: "Template Agnostic",
-      description: "Works with any SoF format - no templates required. Our AI adapts to different document layouts automatically."
+      title: "Batch Processing",
+      description: "Upload multiple documents from the same Statement of Facts. Our AI processes them together with automatic duplicate removal."
     },
     {
       icon: (
         <svg className="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       ),
-      title: "Lightning Fast",
-      description: "Process multiple documents in seconds. Extract events, timestamps, and durations with enterprise-grade speed."
+      title: "Time-Based Analysis",
+      description: "Accurate efficiency calculation based on actual work hours, considering parallel operations that happen simultaneously."
     },
     {
       icon: (
@@ -164,8 +168,8 @@ export default function Home() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
       ),
-      title: "Complete Accuracy",
-      description: "Never miss an event. Our AI ensures 100% event extraction with precise start and end times."
+      title: "Smart Deduplication",
+      description: "Automatically identifies and removes duplicate events across multiple documents while preserving all unique operational periods."
     },
     {
       icon: (
@@ -174,7 +178,7 @@ export default function Home() {
         </svg>
       ),
       title: "Flexible Export",
-      description: "Download results in JSON or CSV format. Perfect for integration with existing maritime systems."
+      description: "Download results in JSON or CSV format. Perfect for integration with existing maritime systems and laytime calculations."
     }
   ];
 
@@ -190,7 +194,7 @@ export default function Home() {
           </h1>
           <p className="mt-3 max-w-md mx-auto text-base text-gray-300 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
             AI-powered Statement of Facts processing for maritime laytime intelligence. 
-            Extract events, timestamps, and durations from any document format.
+            Process multiple documents together with smart deduplication and time-based efficiency analysis.
           </p>
         </div>
 
@@ -203,30 +207,51 @@ export default function Home() {
 
         {/* Upload Section */}
         <div className="bg-gray-800 rounded-lg shadow-xl border border-gray-700 p-6 mb-8">
-          <h2 className="text-xl font-semibold text-white mb-6">Upload Statement of Facts</h2>
+          <h2 className="text-xl font-semibold text-white mb-2">Upload Statement of Facts</h2>
+          <p className="text-gray-400 text-sm mb-6">
+            Upload multiple files that are part of the same Statement of Facts. 
+            They will be processed together with automatic duplicate removal and parallel work analysis.
+          </p>
           <FileUpload onFileSelect={handleFileSelect} />
           
           {selectedFiles.length > 0 && (
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={handleProcessFiles}
-                disabled={processingStatus === 'processing'}
-                className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {processingStatus === 'processing' ? (
-                  <>
-                    <div className="animate-spin -ml-1 mr-3 h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Extract Events
-                  </>
-                )}
-              </button>
+            <div className="mt-6">
+              <div className="bg-blue-900 bg-opacity-50 border border-blue-600 rounded-lg p-4 mb-4">
+                <div className="flex items-start space-x-3">
+                  <svg className="h-5 w-5 text-blue-400 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <h4 className="text-white font-medium text-sm">Batch Processing</h4>
+                    <p className="text-blue-200 text-xs mt-1">
+                      {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} will be processed together as a single Statement of Facts set. 
+                      Duplicates will be automatically removed and efficiency calculated based on actual work hours.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex justify-center">
+                <button
+                  onClick={handleProcessFiles}
+                  disabled={processingStatus === 'processing'}
+                  className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {processingStatus === 'processing' ? (
+                    <>
+                      <div className="animate-spin -ml-1 mr-3 h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                      Processing {selectedFiles.length} Files...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Extract Events from {selectedFiles.length} File{selectedFiles.length > 1 ? 's' : ''}
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -278,6 +303,9 @@ export default function Home() {
         )}
         {extractedResults.length > 0 && (
           <div className="space-y-8">
+            {/* Port Visualization */}
+            <PortVisualization events={extractedResults} analysis={analysisData} />
+
             {/* Analysis Panel */}
             <AnalysisPanel analysis={analysisData} events={extractedResults} />
             
@@ -286,6 +314,7 @@ export default function Home() {
               <ResultsTable 
                 results={extractedResults}
                 onDownload={handleDownload}
+                processingStats={processingStats}
               />
             </div>
           </div>
