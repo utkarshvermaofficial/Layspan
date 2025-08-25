@@ -149,12 +149,6 @@ Drag multiple SoF PDFs / Word docs / images into the drop zone and start process
 
 ---
 
-## 📊 Visual Highlight
-
-Single representative screenshot included above (`public/media/image3.png`). Additional images intentionally omitted to keep the README concise.
-
----
-
 ## 🧠 Prompt / Analysis Strategy (Server)
 The prompt (see `route.js`) enforces:
 * Strict JSON output.
