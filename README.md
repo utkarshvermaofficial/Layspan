@@ -7,7 +7,9 @@
 Interactive maritime operations intelligence: upload multi‑document Statements of Facts (PDF / Word / Images), extract every operational event with OCR + LLM reasoning, navigate an animated timeline, and export structured data (JSON / CSV) for downstream laytime & performance analysis.
 
 <!-- Primary showcase image (single screenshot) -->
-<img src="public/media/image3.png" alt="Port operations timeline showing vessel, active working state and time slider" width="820" />
+![Port operations timeline showing vessel, active working state and time slider](./public/media/image3.png)
+
+<sub>If the image above does not render on GitHub: verify that `public/media/image3.png` is committed (case‑sensitive), then refresh. The Markdown form is used for broad renderer compatibility.</sub>
 
 <br />
 
